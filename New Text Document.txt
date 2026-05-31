@@ -1,0 +1,106 @@
+-- ============================================
+-- ETL PIPELINE: Customer Summary
+-- Purpose:  Summarize customer orders and
+--           categorize by spending behavior
+-- Database: SQLite
+-- Author:   Xolani Shabangu
+-- Date:     2024-01-15
+-- ============================================
+
+-- CREATE TARGET TABLE
+
+CREATE TABLE IF NOT EXISTS Customer_Summary (
+      [Customer_Id] 		[INT],
+      [Full_Name] 			[VARCHAR] (50) NULL,
+      [Total_Orders] 		[INT],
+      [Total_Spending] 		[INT],
+  	  [Shipping_Status] 	[VARCHAR] (50) NULL,
+ 	  [Spending_Category]	[VARCHAR](50) NULL
+
+);
+
+-- EXTRACT, TRANSFORM & LOAD
+WITH Customer_Summary_CTE AS (
+	SELECT
+        C.customer_id 					AS Customer_Id,
+        first_name || ' ' || last_name	AS Full_Name,
+        COUNT(order_id) 				AS Total_Orders,
+        SUM(amount) 					AS Total_Spending,        
+        S.status 						AS Shipping_status
+	FROM Customers	AS C
+	LEFT JOIN Orders AS O
+		ON C.customer_id = O.customer_id
+	LEFT JOIN Shippings AS S
+   		ON C.customer_id = S.customer
+	GROUP BY C.customer_id, first_name, last_name, S.status
+),
+Order_Category AS (
+ 	 SELECT 
+		Customer_Id,
+        Total_Spending,
+        CASE
+              WHEN Total_Spending < 500 THEN 'Low Spender'
+              WHEN Total_Spending >= 500 AND Total_Spending <= 5000 THEN 'Mid Spender'
+              WHEN Total_Spending > 5000 THEN 'High Spender'
+              ELSE 'Unkown'  
+          END AS Spending_Category
+	FROM Customer_Summary_CTE
+),
+
+INSERT INTO Customer_Summary
+SELECT 
+	C.Customer_Id,
+    C.Full_Name,
+    C.Total_Orders,
+    C.Total_Spending,
+    C.Shipping_Status,
+    O.Spending_Category
+
+FROM Customer_Summary_CTE AS C
+LEFT JOIN Order_Category AS O
+ON C.Customer_Id = O.Customer_Id;
+
+
+
+-- Data Quality Checks
+
+SELECT Total_Orders, Total_Spending			-- Checking For Nulls and Empty Spaces
+FROM Customer_Summary
+WHERE (Total_Orders = 0 OR Total_Orders IS NULL)
+AND   (Total_Spending = 0 OR Total_Spending IS NULL);
+
+UPDATE Customer_Summary
+	SET	Total_Orders   = COALESCE(Total_Orders, 0),
+    	Total_Spending = COALESCE(Total_Spending, 0)
+ WHERE	(Total_Orders = 0 OR Total_Orders IS NULL)
+	AND (Total_Spending = 0 OR Total_Spending IS NULL);   
+
+SELECT Shipping_Status FROM Customer_Summary
+WHERE Total_Orders = 0;
+
+UPDATE Customer_Summary
+	SET Shipping_Status = 'No Orders'
+WHERE Total_Orders = 0;
+
+
+SELECT Spending_Category FROM Customer_Summary
+WHERE Total_Orders = 0;
+
+UPDATE Customer_Summary
+	SET Spending_Category = 'Unknown'
+WHERE Total_Orders = 0;
+
+
+SELECT * FROM Customer_Summary		-- Verify
+  
+-- Summary Report 
+
+SELECT
+    Spending_Category,
+    COUNT(*)            AS Total_Customers,
+    SUM(Total_Spending) AS Total_Revenue
+FROM Customer_Summary
+GROUP BY Spending_Category
+ORDER BY Total_Revenue DESC;
+
+
