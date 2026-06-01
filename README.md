@@ -1,4 +1,4 @@
-# Customer Summary ETL Pipeline 🚀
+# End-to-End ETL Pipeline — Customer Summary 
 
 ## Hey, I'm Xolani 👋
 
