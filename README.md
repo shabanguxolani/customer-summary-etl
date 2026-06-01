@@ -2,7 +2,7 @@
 
 ## Hey, I'm Xolani 👋
 
-I'm on a journey to become a data professional and I commit to learning SQL for at least 2 hours every day. This project is one of the results of that journey.
+I'm on a journey to become a data engineer and I commit to learning SQL for at least 2 hours every day. This project is one of the results of that journey.
 
 I wanted to build something that felt real — not just a SELECT statement, but an actual pipeline that takes messy raw data, cleans it up, applies business rules, and delivers something a stakeholder could actually use.
 
